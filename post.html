@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bejegyzés | Széchenyi Hírek</title>
+    <style>
+        /* === Globális stílusok (a már meglévőkből) === */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+            background: #f4f7fc;
+            padding: 2rem;
+            color: #1e2f3a;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 32px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+        }
+        /* ... További stílusok a cikkhez ... */
+        .post-header { margin-bottom: 2rem; border-bottom: 2px solid #eef2f5; padding-bottom: 1rem; }
+        .post-title { font-size: 2.2rem; margin-bottom: 0.5rem; color: #0a2b3e; }
+        .post-meta { color: #5b7a8c; font-size: 0.9rem; margin-bottom: 1.5rem; display: block; }
+        .post-content { font-size: 1.1rem; line-height: 1.6; }
+        .post-content img { max-width: 100%; height: auto; border-radius: 16px; margin: 1rem 0; }
+        .post-content p { margin-bottom: 1.2rem; }
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #e67e22;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .loading, .error { text-align: center; padding: 3rem; font-size: 1.2rem; }
+        .error { color: #b91c1c; background: #ffe6e5; border-radius: 24px; }
+        @media (max-width: 700px) {
+            body { padding: 1rem; }
+            .container { padding: 1.5rem; }
+            .post-title { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="post-container">
+    <div class="loading">⏳ Bejegyzés betöltése...</div>
+</div>
+
+<script>
+    // Segédfüggvények (decode, escape)
+    function decodeHtmlEntities(str) {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = str;
+        return textarea.value;
+    }
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    async function loadPost() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const postId = urlParams.get('id');
+
+        if (!postId) {
+            document.getElementById('post-container').innerHTML = '<div class="error">❌ Érvénytelen vagy hiányzó bejegyzés azonosító.</div>';
+            return;
+        }
+
+        const container = document.getElementById('post-container');
+        container.innerHTML = '<div class="loading">⏳ Bejegyzés betöltése...</div>';
+
+        try {
+            // 1. Lekérjük a poszt adatait
+            const response = await fetch(`https://szig-dujv.hu/wp-json/wp/v2/posts/${postId}?_embed`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const post = await response.json();
+
+            // 2. Feldolgozzuk a tartalmat
+            let title = decodeHtmlEntities(post.title.rendered);
+            let content = post.content.rendered;
+            let date = new Date(post.date);
+            let formattedDate = date.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // 3. Megjelenítjük a modern dizájnban
+            container.innerHTML = `
+                <div class="post-header">
+                    <h1 class="post-title">${escapeHtml(title)}</h1>
+                    <span class="post-meta">📅 Közzétéve: ${formattedDate}</span>
+                </div>
+                <div class="post-content">
+                    ${content}
+                </div>
+                <a href="index.html" class="back-link">← Vissza a hírekhez</a>
+            `;
+
+        } catch (error) {
+            console.error('Hiba a betöltéskor:', error);
+            container.innerHTML = `<div class="error">❌ Hiba történt a bejegyzés betöltésekor: ${error.message}</div>`;
+        }
+    }
+
+    loadPost();
+</script>
+</body>
+</html>
