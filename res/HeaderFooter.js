@@ -50,7 +50,7 @@ class MyHeader extends HTMLElement {
     </div>
 	
 	<div class="logo">
-                <img class="logo-img" src="cimer.png" alt="Dunaújvárosi Széchenyi István Gimnázium címere">
+                <img class="logo-img" src="/szig/res/SzIG_cimer.png" alt="Dunaújvárosi Széchenyi István Gimnázium címere">
                 <div class="logo-text">
                     <h1>Dunaújvárosi Széchenyi István Gimnázium</h1>
                 </div>
