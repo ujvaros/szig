@@ -27,6 +27,10 @@
 			margin-left: 1rem;
 			margin-right: 1rem;
         }
+		.post-grid {
+		    display: grid;
+    		margin-left: 1rem;
+    		margin-right: 1rem;
         .card {
             background: white;
             border-radius: 28px;
