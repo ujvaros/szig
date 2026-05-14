@@ -7,6 +7,7 @@
             font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
             background: #f4f7fc;
             padding:0rem;
+			color: #1e2f3a;
         }
         .container {
             max-width: 1200px;
@@ -417,3 +418,11 @@
             padding-top: 1.5rem;
             margin-top: 0.5rem;
         }
+
+div#post-container {
+    max-width: 900px;
+    background: white;
+    padding: 2.5rem;
+    box-shadow: 0 20px 35px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 28px;
+    margin-bottom: 1rem;
