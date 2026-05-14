@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Széchenyi Hírek – Modern nézet</title>
+    <style>
+        /* --- CSS VÁLTOZÓK --- */
+        :root {
+            --bg-body: #f4f7fc;
+            --bg-surface: #ffffff;
+            --text-primary: #1e2f3a;
+            --text-secondary: #5b7a8c;
+            --heading-color: #0a2b3e;
+            --border-color: #eef2f5;
+            --card-shadow: 0 12px 24px -12px rgba(0,0,0,0.1);
+            --button-bg: #ffffff;
+            --button-border: #2c6e9e;
+            --button-text: #2c6e9e;
+            --button-hover-bg: #2c6e9e;
+            --button-hover-text: #ffffff;
+            --fallback-bg: linear-gradient(135deg, #2c6e9e, #1a4b6e);
+            --overlay-bg: rgba(0,0,0,0.5);
+            --menu-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #121212;
+            --bg-surface: #1e1e2f;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0b0;
+            --heading-color: #e67e22;
+            --border-color: #2c2c3a;
+            --card-shadow: 0 12px 24px -12px rgba(0,0,0,0.5);
+            --button-bg: #2c2c3a;
+            --button-border: #e67e22;
+            --button-text: #e67e22;
+            --button-hover-bg: #e67e22;
+            --button-hover-text: #121212;
+            --fallback-bg: linear-gradient(135deg, #1a4b6e, #0f2c40);
+            --overlay-bg: rgba(0,0,0,0.7);
+            --menu-bg: #1e1e2f;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.2s ease;
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* --- NAVBAR (sticky, a menü gombbal) --- */
+        .site-header {
+            background: var(--bg-surface);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: background 0.3s ease;
+        }
+        .site-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 15px 20px;
+        }
+        .site-branding {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .site-branding img {
+            height: 50px;
+            width: auto;
+        }
+        .site-title a {
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--heading-color);
+        }
+        /* Hamburger gomb */
+        .navbar-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            z-index: 1100;
+            position: relative;
+        }
+        .icon-bar {
+            display: block;
+            width: 25px;
+            height: 3px;
+            background: var(--text-primary);
+            margin: 5px 0;
+            transition: 0.3s;
+        }
+        /* Téma váltó gomb a navbar jobb oldalán */
+        .theme-toggle {
+            background: var(--button-bg);
+            border: 2px solid var(--button-border);
+            border-radius: 40px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--button-text);
+            transition: all 0.2s ease;
+        }
+        .theme-toggle:hover {
+            background: var(--button-hover-bg);
+            color: var(--button-hover-text);
+        }
+
+        /* --- OFF-CANVAS MENÜ (balról becsúszó) --- */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(2px);
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.3s, opacity 0.3s;
+            z-index: 1500;
+        }
+        .overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background: var(--menu-bg);
+            box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+            transition: left 0.3s ease;
+            z-index: 1600;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+        .side-menu.active {
+            left: 0;
+        }
+        .side-menu .close-btn {
+            align-self: flex-end;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            padding: 10px 20px;
+        }
+        .side-menu .nav-menu {
+            list-style: none;
+            padding: 0 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .side-menu .nav-menu li a {
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: block;
+            padding: 8px 0;
+        }
+        .side-menu .nav-menu li a:hover {
+            color: #e67e22;
+        }
+        /* A jobb oldali kapcsoló a navbar-ban marad, bal oldali menüt nem érinti */
+        @media (min-width: 769px) {
+            .navbar-toggle {
+                display: block; /* Mindig látszik a hamburger, asztalon is (opcionális) */
+            }
+        }
+
+        /* --- HÍRES KÁRTYÁK STÍLUSAI --- */
+        h1 {
+            font-size: 2.5rem;
+            margin: 2rem 0 2rem 0;
+            color: var(--heading-color);
+            border-left: 6px solid #e67e22;
+            padding-left: 1rem;
+        }
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: var(--bg-surface);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s ease, background 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .card:hover { transform: translateY(-6px); }
+        .image-container {
+            width: 100%;
+            height: 200px;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card img { width: 100%; height: 100%; object-fit: cover; }
+        .no-img-fallback {
+            background: var(--fallback-bg);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+            width: 100%;
+        }
+        .card-content { padding: 1.5rem; flex: 1; }
+        .card h2 { font-size: 1.4rem; margin-bottom: 0.75rem; }
+        .card h2 a { text-decoration: none; color: var(--heading-color); }
+        .card h2 a:hover { color: #e67e22; }
+        .date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .excerpt { color: var(--text-primary); line-height: 1.4; }
+        .loading, .error {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 2rem;
+            color: var(--text-primary);
+        }
+        .error {
+            background: #ffe6e5;
+            color: #b91c1c;
+            border-radius: 20px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+        }
+        .page-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--button-bg);
+            border: 2px solid var(--button-border);
+            border-radius: 40px;
+            color: var(--button-text);
+            font-weight: 600;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .page-btn:hover {
+            background: var(--button-hover-bg);
+            color: var(--button-hover-text);
+        }
+        .page-btn.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <div class="site-branding">
+                <a href="https://szig-dujv.hu/" rel="home">
+                    <img src="https://szig-dujv.hu/wp-content/uploads/2024/11/cropped-szechenyi-logo-1.png" alt="Dunaújvárosi Széchenyi István Gimnázium">
+                </a>
+                <div class="site-title">
+                    <a href="https://szig-dujv.hu/" rel="home">Dunaújvárosi Széchenyi István Gimnázium</a>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button class="navbar-toggle" id="menuToggle" aria-label="Menü">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <button id="theme-switch" class="theme-toggle" aria-label="Sötét/világos mód">🌙 Sötét mód</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overlay és oldalsó menü -->
+    <div class="overlay" id="overlay"></div>
+    <div class="side-menu" id="sideMenu">
+        <button class="close-btn" id="closeMenu">✕</button>
+        <ul class="nav-menu">
+            <li class="menu-item"><a href="https://szig-dujv.hu/">Főoldal</a></li>
+            <li class="menu-item"><a href="https://szig-dujv.hu/az-iskolarol/">Az iskoláról</a></li>
+            <li class="menu-item"><a href="https://szig-dujv.hu/kepezesink/">Képzéseink</a></li>
+            <li class="menu-item"><a href="https://szig-dujv.hu/hirek/">Hírek</a></li>
+            <li class="menu-item"><a href="https://szig-dujv.hu/galeria/">Galéria</a></li>
+            <li class="menu-item"><a href="https://szig-dujv.hu/kapcsolat/">Kapcsolat</a></li>
+            <li class="menu-item"><a href="https://classroom.google.com/">CLASSROOM</a></li>
+            <li class="menu-item"><a href="https://kreta.hu/">KRÉTA</a></li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h1>📰 DSTV – Friss hírek</h1>
+        <div id="news-container" class="news-grid">
+            <div class="loading">⏳ Hírek betöltése…</div>
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <script>
+        // --- TÉMA KEZELÉS (localStorage + DOM) ---
+        (function() {
+            const themeSwitch = document.getElementById('theme-switch');
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    themeSwitch.innerHTML = '☀️ Világos mód';
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                    themeSwitch.innerHTML = '🌙 Sötét mód';
+                }
+                localStorage.setItem('theme', theme);
+            }
+            setTheme(currentTheme);
+            themeSwitch.addEventListener('click', () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                setTheme(isDark ? 'light' : 'dark');
+            });
+        })();
+
+        // --- OFF-CANVAS MENÜ (balról becsúszó) ---
+        (function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('overlay');
+            const closeBtn = document.getElementById('closeMenu');
+
+            function openMenu() {
+                sideMenu.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeMenu() {
+                sideMenu.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            menuToggle.addEventListener('click', openMenu);
+            closeBtn.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+            // Menüpontra kattintva is záródjon
+            const menuLinks = document.querySelectorAll('.side-menu .nav-menu a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
+        })();
+
+        // --- HÍREK BETÖLTÉSE (a korábban működő script) ---
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentPage = parseInt(urlParams.get('page')) || 1;
+        const perPage = 10;
+
+        const container = document.getElementById('news-container');
+        const paginationDiv = document.getElementById('pagination');
+
+        function decodeHtmlEntities(str) {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = str;
+            return textarea.value;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        async function loadNews(page) {
+            container.innerHTML = '<div class="loading">⏳ Hírek betöltése…</div>';
+            try {
+                const url = `https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    if (response.status === 404 && page > 1) {
+                        container.innerHTML = '<div class="error">📭 Nincs több hír.</div>';
+                        paginationDiv.innerHTML = '';
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const posts = await response.json();
+                if (!posts.length) {
+                    container.innerHTML = '<div class="error">🚫 Nincs hír ezen az oldalon.</div>';
+                    paginationDiv.innerHTML = '';
+                    return;
+                }
+                container.innerHTML = posts.map(post => generateCard(post)).join('');
+
+                const linkHeader = response.headers.get('Link');
+                let hasPrev = false, hasNext = false;
+                if (linkHeader) {
+                    hasPrev = linkHeader.includes('rel="prev"');
+                    hasNext = linkHeader.includes('rel="next"');
+                } else {
+                    if (page > 1) hasPrev = true;
+                    if (posts.length === perPage) hasNext = true;
+                }
+                paginationDiv.innerHTML = `
+                    ${hasPrev ? `<a href="?page=${page-1}" class="page-btn">◀ Előző oldal</a>` : `<span class="page-btn disabled">◀ Előző oldal</span>`}
+                    <span style="padding: 0 1rem;">${page}. oldal</span>
+                    ${hasNext ? `<a href="?page=${page+1}" class="page-btn">Következő oldal ▶</a>` : `<span class="page-btn disabled">Következő oldal ▶</span>`}
+                `;
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<div class="error">❌ Hiba: ${error.message}</div>`;
+                paginationDiv.innerHTML = '';
+            }
+        }
+
+        function generateCard(post) {
+            let rawTitle = post.title.rendered;
+            let cleanTitle = decodeHtmlEntities(rawTitle).trim();
+            if (cleanTitle === '') cleanTitle = '(Cím nélküli bejegyzés)';
+            const safeTitle = escapeHtml(cleanTitle);
+            
+            let imageUrl = null;
+            if (post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0]) {
+                imageUrl = post._embedded['wp:featuredmedia'][0].source_url;
+            }
+            if (!imageUrl && post.content && post.content.rendered) {
+                const imgMatch = post.content.rendered.match(/<img[^>]+src=["']([^"']+)["']/i);
+                if (imgMatch) imageUrl = imgMatch[1];
+            }
+            const hasImage = imageUrl && imageUrl.startsWith('http');
+            
+            const date = new Date(post.date);
+            const formattedDate = date.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            let excerpt = '';
+            if (post.excerpt && post.excerpt.rendered) {
+                let rawExcerpt = post.excerpt.rendered.replace(/<[^>]*>/g, '');
+                rawExcerpt = decodeHtmlEntities(rawExcerpt).trim();
+                if (rawExcerpt.length > 10 && !rawExcerpt.includes('{') && !rawExcerpt.includes('}') && !rawExcerpt.includes('function')) {
+                    excerpt = rawExcerpt.substring(0, 140);
+                }
+            }
+            if (excerpt.length === 0 && post.content && post.content.rendered) {
+                let contentText = post.content.rendered.replace(/<[^>]*>/g, '');
+                contentText = decodeHtmlEntities(contentText);
+                contentText = contentText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                contentText = contentText.trim();
+                if (contentText.length > 30 && !contentText.includes('{') && !contentText.includes('function(')) {
+                    excerpt = contentText.substring(0, 140);
+                }
+            }
+            if (excerpt.length === 0) excerpt = '📄 Kattintson a bejegyzés címére a teljes tartalom megtekintéséhez.';
+            if (excerpt.length > 140) excerpt = excerpt.substring(0, 140) + '…';
+            const safeExcerpt = escapeHtml(excerpt);
+            
+            let imageHtml = '';
+            if (hasImage) {
+                imageHtml = `<img src="${imageUrl}" alt="Illusztráció" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
+                imageHtml += `<div class="no-img-fallback" style="display: none;">📸 Kép nem tölthető be</div>`;
+            } else {
+                imageHtml = `<div class="no-img-fallback">🏫 DSTV<br>Hírek</div>`;
+            }
+            
+            return `
+                <div class="card">
+                    <div class="image-container">${imageHtml}</div>
+                    <div class="card-content">
+                        <span class="date">📅 ${formattedDate}</span>
+                        <h2><a href="post.html?id=${post.id}" target="_self">${safeTitle}</a></h2>
+                        <div class="excerpt">${safeExcerpt}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        loadNews(currentPage);
+    </script>
+</body>
+</html>
