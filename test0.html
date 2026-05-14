@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dunaújvárosi Széchenyi István Gimnázium – Kezdőlap</title>
+    <link rel="stylesheet" href="/szig/res/styles.css">
+    <!-- Alapértelmezett szín (világos mód) -->
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<!-- Szín sötét módhoz -->
+<meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
+</head>
+<body>
+<script src="/szig/res/HeaderFooter.js"></script>
+	<my-header></my-header>
+<div class="container">
+    <div id="news-container" class="news-grid">
+        <div class="loading">⏳ Hírek betöltése…</div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentPage = parseInt(urlParams.get('page')) || 1;
+    const perPage = 10;
+
+    const container = document.getElementById('news-container');
+    const paginationDiv = document.getElementById('pagination');
+
+    // HTML entitások dekódolása (pl. &#8211; → –)
+    function decodeHtmlEntities(str) {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = str;
+        return textarea.value;
+    }
+
+    // XSS védelem (csak a veszélyes karaktereket cseréli)
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    async function loadNews(page) {
+        container.innerHTML = '<div class="loading">⏳ Hírek betöltése…</div>';
+        try {
+            const url = `https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                if (response.status === 404 && page > 1) {
+                    container.innerHTML = '<div class="error">📭 Nincs több hír.</div>';
+                    paginationDiv.innerHTML = '';
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const posts = await response.json();
+            if (!posts.length) {
+                container.innerHTML = '<div class="error">🚫 Nincs hír ezen az oldalon.</div>';
+                paginationDiv.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => generateCard(post)).join('');
+            
+            // Lapozó gombok előállítása a Link fejléc alapján
+            const linkHeader = response.headers.get('Link');
+            let hasPrev = false;
+            let hasNext = false;
+            
+            if (linkHeader) {
+                hasPrev = linkHeader.includes('rel="prev"');
+                hasNext = linkHeader.includes('rel="next"');
+            } else {
+                if (page > 1) hasPrev = true;
+                if (posts.length === perPage) hasNext = true;
+            }
+            
+            paginationDiv.innerHTML = `
+                ${hasPrev ? `<a href="?page=${page-1}" class="page-btn">◀ Előző oldal</a>` : `<span class="page-btn disabled">◀ Előző oldal</span>`}
+                <div class=footer-page><span style="padding: 0 1rem;">${page}. oldal</span></div>
+                ${hasNext ? `<a href="?page=${page+1}" class="page-btn">Következő oldal ▶</a>` : `<span class="page-btn disabled">Következő oldal ▶</span>`}
+            `;
+            
+        } catch (error) {
+            console.error('Hiba:', error);
+            container.innerHTML = `<div class="error">❌ Hiba a hírek betöltésekor: ${error.message}</div>`;
+            paginationDiv.innerHTML = '';
+        }
+    }
+
+    function generateCard(post) {
+        // --- Cím kezelése: ha üres, akkor "(Cím nélküli bejegyzés)" ---
+        let rawTitle = post.title.rendered;
+        let cleanTitle = decodeHtmlEntities(rawTitle).trim();
+        if (cleanTitle === '') {
+            cleanTitle = '(Cím nélküli bejegyzés)';
+        }
+        const safeTitle = escapeHtml(cleanTitle);
+        
+        // --- Kép keresése ---
+        let imageUrl = null;
+        if (post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0]) {
+            imageUrl = post._embedded['wp:featuredmedia'][0].source_url;
+        }
+        if (!imageUrl && post.content && post.content.rendered) {
+            const imgMatch = post.content.rendered.match(/<img[^>]+src=["']([^"']+)["']/i);
+            if (imgMatch) imageUrl = imgMatch[1];
+        }
+        const hasImage = imageUrl && imageUrl.startsWith('http');
+        
+        // --- Dátum ---
+        const date = new Date(post.date);
+        const formattedDate = date.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // --- OKOS KIVONAT KEZELÉS (JS-kódok elkerülése) ---
+        let excerpt = '';
+        
+        // 1. WordPress excerpt
+        if (post.excerpt && post.excerpt.rendered) {
+            let rawExcerpt = post.excerpt.rendered.replace(/<[^>]*>/g, '');
+            rawExcerpt = decodeHtmlEntities(rawExcerpt).trim();
+            if (rawExcerpt.length > 10 && !rawExcerpt.includes('{') && !rawExcerpt.includes('}') && !rawExcerpt.includes('function')) {
+                excerpt = rawExcerpt.substring(0, 140);
+            }
+        }
+        
+        // 2. Tartalom alapján (ha nincs jó excerpt)
+        if (excerpt.length === 0 && post.content && post.content.rendered) {
+            let contentText = post.content.rendered.replace(/<[^>]*>/g, '');
+            contentText = decodeHtmlEntities(contentText);
+            // Script tagek eltávolítása
+            contentText = contentText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            contentText = contentText.trim();
+            if (contentText.length > 30 && !contentText.includes('{') && !contentText.includes('function(')) {
+                excerpt = contentText.substring(0, 140);
+            }
+        }
+        
+        // 3. Alapértelmezett szöveg
+        if (excerpt.length === 0) {
+            excerpt = '📄 Kattintson a bejegyzés címére a teljes tartalom megtekintéséhez.';
+        }
+        if (excerpt.length > 140) excerpt = excerpt.substring(0, 140) + '…';
+        
+        const safeExcerpt = escapeHtml(excerpt);
+        
+        // --- Kép HTML ---
+        let imageHtml = '';
+        if (hasImage) {
+            imageHtml = `<img src="${imageUrl}" alt="Illusztráció" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
+            imageHtml += `<div class="no-img-fallback" style="display: none;">📸 Nem található betölthető kép</div>`;
+        } else {
+            imageHtml = `<div class="no-img-fallback">📸 Nem található betölthető kép</div>`;
+        }
+        
+        // ★ ITT A LÉNYEGES MÓDOSÍTÁS: a hivatkozás a saját post.html-re mutat, átadva az ID-t ★
+        return `
+            <div class="card">
+                <div class="image-container">${imageHtml}</div>
+                <div class="card-content">
+                    <span class="date">📅 ${formattedDate}</span>
+                    <h2><a href="post.html?id=${post.id}" target="_self">${safeTitle}</a></h2>
+                    <div class="excerpt">${safeExcerpt}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Oldal betöltése
+    loadNews(currentPage);
+</script>
+<!-- Lábléc -->
+    <my-footer></my-footer>
+</body>
+</html>
