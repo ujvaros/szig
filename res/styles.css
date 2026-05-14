@@ -21,7 +21,7 @@
         .news-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 2rem;
+            gap: 1rem;
             margin-bottom: 2rem;
 			margin-left: 1rem;
 			margin-right: 1rem;
@@ -302,13 +302,12 @@
             display: flex;
 			justify-content: center;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1rem;
             list-style: none;
         }
 
         .nav-links a {
             text-decoration: none;
-            font-weight: 700;
             transition: color 0.2s;
             font-size: 0.95rem;
         }
@@ -320,7 +319,16 @@
         .nav-links a:hover {
             color: green;
         }
-		
+
+		li {
+			font-weight: 600;
+ 	    	padding: 4px 8px 4px 8px;
+	    	height: 32px;
+    		display: flex;
+    		justify-content: center;
+	    	align-items: center;
+		}
+
 		.G-class {
 			display: flex;
 			justify-content: center;
@@ -332,6 +340,7 @@
             background: #EDF2F7;
             color: black;
             border-radius: 0px;
+			font-weight: 700;
                                     }
 		.nav-kreta {
 			display: flex;
@@ -344,6 +353,7 @@
             background: #0070ff;
             color: white;
             border-radius: 0px;
+			font-weight: 700;
         }
 		.LMS-logo{
             display: flex;
