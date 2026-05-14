@@ -67,7 +67,7 @@ class MyHeader extends HTMLElement {
 				<li><a href="#" class="nav-b">Menza</a></li>
 				<li><a href="#" class="nav-b">Egészségügy</a></li>
                 <li><a href="/szig/page?id=4305" class="nav-b">Kapcsolat</a></li>
-				<a class="G-class" href="https://accounts.google.com/v3/signin/identifier?hd=szig.mdn.hu&flowName=GlifWebSignIn" rel="noopener noreferrer" target="_blank">
+				<a class="G-class" href="https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fclassroom.google.com&hd=szig.mdn.hu&flowName=GlifWebSignIn" rel="noopener noreferrer" target="_blank">
 					<span class="LMS-logo"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21" focusable="false" class="chakra-icon css-tr59jl" aria-hidden="true"><g fill="" fill-rule="evenodd"><g><g><g><g><path d="M18.375 10.316c0 3.631-1.934 8.059-7.761 8.059-4.38.03-7.955-3.495-7.989-7.875.034-4.38 3.609-7.904 7.989-7.875 1.812.007 3.568.623 4.987 1.75.098.08.159.197.166.324.001.128-.05.25-.14.341-.57.52-1.112 1.07-1.627 1.645-.15.165-.4.188-.578.053-.808-.599-1.794-.907-2.8-.876-2.585 0-4.68 2.096-4.68 4.682 0 2.585 2.095 4.681 4.68 4.681 2.626 0 3.737-1.12 4.314-3.106h-3.998c-.242 0-.438-.196-.438-.438V9.363c0-.242.196-.438.438-.438h7c.201-.001.37.15.393.35.033.346.047.694.044 1.041z" transform="translate(-920 -245) translate(222 235) translate(688) translate(10 10)"></path></g></g></g></g></g></svg>
 					</span>CLASSROOM
 				</a>
