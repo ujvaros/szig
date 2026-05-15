@@ -3,8 +3,7 @@ class MyHeader extends HTMLElement {
 		this.innerHTML = `
 		<div class="top-bar">
         <div class="container">
-			<p class=elerhetosegek>OM kód: <!-- -->030180<!-- --> | <!-- -->2400 Dunaújváros, Dózsa György út 15/A
-			</p>
+			<p class=elerhetosegek>2400 Dunaújváros, Dózsa György út 15/A <br> OM kód azonosító: 030180</p>
             <div class="social">
 				<a class="top-gomb" aria-label="Facebook oldal megnyitása" href="https://www.facebook.com/szigdujv" rel="noopener noreferrer" title="Facebook" target="_blank">
 					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" focusable="false" class="chakra-icon css-1j8cdq4" aria-hidden="true">
