@@ -15,8 +15,63 @@
     </div>
     <div class="pagination" id="pagination"></div>
 </div>
+<script src="/szig/res/nav-menu-button.js"></script>
 
 <script>
+	// ======================= KIEMELT BEJEGYZÉS AUTOMATIKUS KIVÁLASZTÁSA =======================
+        // Válaszd ki a kiemelés módját:
+        // 'latest' – a legfrissebb bejegyzés
+        // 'featured_category' – egy adott kategória legfrissebb bejegyzése
+        // 'sticky' – a WordPressben kitűzött (sticky) bejegyzés, ha nincs, akkor a legfrissebb
+        const FETCH_MODE = 'sticky';  // <--- ITT TUDOD ÁLLÍTANI
+        const FEATURED_CATEGORY_SLUG = 'kiemelt'; // Csak 'featured_category' módhoz
+
+        async function fetchFeaturedPost() {
+            try {
+                if (FETCH_MODE === 'latest') {
+                    const url = `https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=1&_embed`;
+                    const response = await fetch(url);
+                    if (!response.ok) return null;
+                    const posts = await response.json();
+                    return posts.length ? posts[0] : null;
+                }
+                else if (FETCH_MODE === 'featured_category') {
+                    // Először lekérjük a kategória ID-ját a slug alapján
+                    const catUrl = `https://szig-dujv.hu/wp-json/wp/v2/categories?slug=${FEATURED_CATEGORY_SLUG}`;
+                    const catResponse = await fetch(catUrl);
+                    if (!catResponse.ok) return null;
+                    const categories = await catResponse.json();
+                    if (!categories.length) {
+                        console.warn(`Kategória nem található: ${FEATURED_CATEGORY_SLUG}`);
+                        return null;
+                    }
+                    const catId = categories[0].id;
+                    const postsUrl = `https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=1&categories=${catId}&_embed`;
+                    const postsResponse = await fetch(postsUrl);
+                    if (!postsResponse.ok) return null;
+                    const posts = await postsResponse.json();
+                    return posts.length ? posts[0] : null;
+                }
+                else if (FETCH_MODE === 'sticky') {
+                    const url = `https://szig-dujv.hu/wp-json/wp/v2/posts?sticky=true&per_page=1&_embed`;
+                    const response = await fetch(url);
+                    if (!response.ok) return null;
+                    const posts = await response.json();
+                    if (posts.length) return posts[0];
+                    // Ha nincs kitűzött, akkor a legfrissebb
+                    console.warn('Nincs kitűzött bejegyzés, a legfrissebb kerül kiemelésre.');
+                    const fallbackResponse = await fetch(`https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=1&_embed`);
+                    if (!fallbackResponse.ok) return null;
+                    const fallbackPosts = await fallbackResponse.json();
+                    return fallbackPosts.length ? fallbackPosts[0] : null;
+                }
+                return null;
+            } catch (error) {
+                console.error('Hiba a kiemelt bejegyzés lekérésekor:', error);
+                return null;
+            }
+        }
+	// Hírek betöltése
     const urlParams = new URLSearchParams(window.location.search);
     let currentPage = parseInt(urlParams.get('page')) || 1;
     const perPage = 10;
@@ -42,28 +97,36 @@
     }
 
     async function loadNews(page) {
-        container.innerHTML = '<div class="loading">⏳ Hírek betöltése…</div>';
-        try {
-            const url = `https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`;
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                if (response.status === 404 && page > 1) {
-                    container.innerHTML = '<div class="error">📭 Nincs több hír.</div>';
+            container.innerHTML = '<div class="loading">⏳ Hírek betöltése…</div>';
+            try {
+                let featuredPostHtml = '';
+                // Kiemelt bejegyzés csak az első oldalon
+                if (page === 1) {
+                    const featuredPost = await fetchFeaturedPost();
+                    if (featuredPost) {
+                        featuredPostHtml = generateCard(featuredPost, true);
+                    }
+                }
+
+                const url = `https://szig-dujv.hu/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    if (response.status === 404 && page > 1) {
+                        container.innerHTML = '<div class="error">📭 Nincs több hír.</div>';
+                        paginationDiv.innerHTML = '';
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const posts = await response.json();
+                if (!posts.length && !featuredPostHtml) {
+                    container.innerHTML = '<div class="error">🚫 Nincs hír ezen az oldalon.</div>';
                     paginationDiv.innerHTML = '';
                     return;
                 }
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const posts = await response.json();
-            if (!posts.length) {
-                container.innerHTML = '<div class="error">🚫 Nincs hír ezen az oldalon.</div>';
-                paginationDiv.innerHTML = '';
-                return;
-            }
-            
-            container.innerHTML = posts.map(post => generateCard(post)).join('');
+
+                const normalCardsHtml = posts.map(post => generateCard(post)).join('');
+                container.innerHTML = featuredPostHtml + normalCardsHtml;
             
             // Lapozó gombok előállítása a Link fejléc alapján
             const linkHeader = response.headers.get('Link');
@@ -91,14 +154,11 @@
         }
     }
 
-    function generateCard(post) {
-        // --- Cím kezelése: ha üres, akkor "(Cím nélküli bejegyzés)" ---
-        let rawTitle = post.title.rendered;
-        let cleanTitle = decodeHtmlEntities(rawTitle).trim();
-        if (cleanTitle === '') {
-            cleanTitle = '(Cím nélküli bejegyzés)';
-        }
-        const safeTitle = escapeHtml(cleanTitle);
+    function generateCard(post, isFeatured = false) {
+            let rawTitle = post.title.rendered;
+            let cleanTitle = decodeHtmlEntities(rawTitle).trim();
+            if (cleanTitle === '') cleanTitle = '(Cím nélküli bejegyzés)';
+            const safeTitle = escapeHtml(cleanTitle);
         
         // --- Kép keresése ---
         let imageUrl = null;
@@ -123,7 +183,7 @@
             let rawExcerpt = post.excerpt.rendered.replace(/<[^>]*>/g, '');
             rawExcerpt = decodeHtmlEntities(rawExcerpt).trim();
             if (rawExcerpt.length > 10 && !rawExcerpt.includes('{') && !rawExcerpt.includes('}') && !rawExcerpt.includes('function')) {
-                excerpt = rawExcerpt.substring(0, 140);
+                excerpt = rawExcerpt.substring(0, 150);
             }
         }
         
@@ -155,18 +215,23 @@
         } else {
             imageHtml = `<div class="no-img-fallback">📸 Nem található betölthető kép</div>`;
         }
+		
+		const featuredClass = isFeatured ? 'card-featured' : '';
+        const featuredBadge = isFeatured ? '<div class="featured-badge">⭐ Kiemelt hír</div>' : '';
+
         
         // ★ ITT A LÉNYEGES MÓDOSÍTÁS: a hivatkozás a saját post.html-re mutat, átadva az ID-t ★
         return `
-            <div class="card">
-                <div class="image-container">${imageHtml}</div>
-                <div class="card-content">
-                    <span class="date">📅 ${formattedDate}</span>
-                    <h2><a href="post.html?id=${post.id}" target="_self">${safeTitle}</a></h2>
-                    <div class="excerpt">${safeExcerpt}</div>
+                <div class="card ${featuredClass}">
+                    ${featuredBadge}
+                    <div class="image-container">${imageHtml}</div>
+                    <div class="card-content">
+                        <span class="date">📅 ${formattedDate}</span>
+                        <h2><a href="post.html?id=${post.id}" target="_self">${safeTitle}</a></h2>
+                        <div class="excerpt">${safeExcerpt}</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
     }
 
     // Oldal betöltése
